@@ -1,0 +1,66 @@
+name: Telegram Repo Update
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram channel notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+          chat_id = os.environ.get("TELEGRAM_CHANNEL_ID", "").strip()
+          if not token or not chat_id:
+              raise SystemExit("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID GitHub secret.")
+
+          commit_message = (os.environ.get("COMMIT_MESSAGE") or "").strip() or "(no commit message)"
+          short_sha = (os.environ.get("SHA") or "")[:7]
+          text = "\n".join(
+              [
+                  "Repository update pushed",
+                  f"Repo: {os.environ.get('REPOSITORY', '-')}",
+                  f"Branch: {os.environ.get('BRANCH', '-')}",
+                  f"Commit: {short_sha}",
+                  f"Author: {os.environ.get('ACTOR', '-')}",
+                  f"Message: {commit_message}",
+                  f"URL: {os.environ.get('COMMIT_URL', '-')}",
+              ]
+          )
+
+          payload = urllib.parse.urlencode(
+              {
+                  "chat_id": chat_id,
+                  "text": text,
+                  "disable_web_page_preview": "true",
+              }
+          ).encode("utf-8")
+
+          request = urllib.request.Request(
+              f"https://api.telegram.org/bot{token}/sendMessage",
+              data=payload,
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              body = response.read().decode("utf-8", errors="replace")
+              print(body)
+          PY
