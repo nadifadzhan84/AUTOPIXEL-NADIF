@@ -1,0 +1,10 @@
+# One proxy per line.
+# Supported formats:
+#   http://ip:port
+#   http://user:pass@ip:port
+#   socks5://ip:port
+#   ip:port:user:pass
+#   user:pass@ip:port
+
+# Examples:
+geo.g-w.info:10080:xxxxxxxxxxx:xxxxxxxxxxx

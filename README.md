@@ -5,7 +5,7 @@ Created by **Nadif Rizky**
 
 AutoPixel is a Telegram bot that simulates a Pixel 10 Pro session, signs in to a Google account, checks Google One / Gemini offer availability, and gives you a modern control panel for session, proxy, IP, and diagnostic tools.
 
-## What This Bot Does
+## Highlights
 
 - Simulates a fresh Pixel 10 Pro device profile for each login session
 - Supports Gmail and Google Workspace accounts
@@ -20,6 +20,35 @@ AutoPixel is a Telegram bot that simulates a Pixel 10 Pro session, signs in to a
   - 2-column grid buttons
   - `[·]` section cards
   - emoji-rich menu labels
+
+## Documentation
+
+| File | Purpose |
+|---|---|
+| `README.md` | Product overview, setup summary, commands, and troubleshooting |
+| `CARA JALANKAN.txt` | Plain-text run guide for Windows PowerShell, Windows CMD, and Android Termux |
+| `CHANGELOG.md` | Baseline release notes and architecture history |
+
+## Pixel Promo Region Matrix
+
+As of **March 31, 2026**, Google's official Pixel offer page lists the **Pixel 10 Pro / Pixel 10 Pro XL / Pixel 10 Pro Fold** Google AI Pro promo across the following region groups. Actual eligibility still depends on device purchase + activation, account status, billing profile, and Google's live eligibility checks.
+
+| Region Group | Countries / Regions Listed by Google | Notes |
+|---|---|---|
+| USA & North America | Canada, Mexico, United States | Listed on the official Pixel offer help page |
+| Europe | Austria, Belgium, Czechia, Denmark, Estonia, Finland, France, Germany, Hungary, Ireland, Italy, Latvia, Lithuania, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, United Kingdom | Listed on the official Pixel offer help page |
+| Asia-Pacific | Australia, India, Japan, Malaysia, Singapore, Taiwan | Listed on the official Pixel offer help page |
+
+Important notes:
+
+- Google also lists **Japan** separately on the same Pixel offer page for a shorter trial on some Pixel Pro offer rows, so trial length can vary by country and device row.
+- Google AI Pro itself is supported in a much wider set of countries and regions than the Pixel-device promo. That means the plan may exist in a country even when the Pixel promo is not officially listed there.
+- This bot can only check for offer visibility and eligibility. It cannot make an account eligible in a country or billing profile that Google does not support.
+
+Official sources:
+
+- [Google One offers for Pixel devices](https://support.google.com/pixelphone/answer/13529884?hl=en-GB)
+- [Get a Google AI Pro membership](https://support.google.com/googleone/answer/16476811?co=GENIE.Platform%3DDesktop&hl=en)
 
 ## Main Commands
 
@@ -84,23 +113,53 @@ AUTOPIXEL/
 - A Telegram bot token from `@BotFather`
 - Internet connection
 - Optional: `proxies.txt` if you want proxy mode
+- Full browser automation is best supported on Windows, Linux, or macOS with desktop Chrome available
 
-## Local Setup
+## Quick Start
 
-### 1. Create and activate virtualenv
+For the full plain-text run guide, see [`CARA JALANKAN.txt`](CARA%20JALANKAN.txt).
+
+### Windows PowerShell
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-### 2. Install dependencies
-
-```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe main.py
 ```
 
-### 3. Configure environment
+### Windows Command Prompt (CMD)
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+copy .env.example .env
+.\.venv\Scripts\python.exe main.py
+```
+
+### Android Termux
+
+```bash
+pkg update && pkg upgrade -y
+pkg install -y python git clang rust libffi openssl
+cd /path/to/AUTOPIXEL
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+cp .env.example .env
+python main.py
+```
+
+Termux note: the Telegram bot process can run in Termux, but Chrome-based Google login automation normally requires a desktop-class Chrome/WebDriver environment.
+
+## Detailed Setup Notes
+
+### Environment file
 
 Copy `.env.example` to `.env` and fill what you need:
 
@@ -120,11 +179,15 @@ Notes:
 
 - `BOT_HEADER_MEDIA_URL` supports a local image path, image URL, GIF URL, or MP4 URL
 - if `BOT_HEADER_MEDIA_URL` is empty, the bot uses the bundled local banner asset
-- if `CHROMEDRIVER_PATH` is empty, Selenium Manager fallback is used
+- if `CHROMEDRIVER_PATH` is empty, the runtime falls back to automatic driver resolution
 
-### 4. Optional: add proxies
+### Optional proxies
 
-Create `proxies.txt` in the project root if you want proxy mode.
+The repository includes a sample `proxies.txt` in the project root.
+Edit that file directly if you want proxy mode.
+
+If you want the bot to start in direct mode by default, set `PROXY_ENABLED=0`.
+Leaving `PROXY_FILE_PATH` empty does not disable proxy mode. It only falls back to the default `proxies.txt` path.
 
 Supported formats:
 
@@ -135,12 +198,6 @@ https://user:pass@ip:port
 socks5://ip:port
 ip:port:user:pass
 user:pass@ip:port
-```
-
-### 5. Run the bot
-
-```powershell
-python main.py
 ```
 
 ## Typical Flow
@@ -246,14 +303,14 @@ Created by Nadif Rizky.
 
 ## Troubleshooting
 
-| Problem | Likely Cause | Next Step |
-|---|---|---|
-| `No module named 'telegram'` | You ran global Python instead of the project virtualenv | Activate `.venv` and run `python main.py` again |
-| `409 Conflict` | More than one bot instance is running | Stop duplicate `main.py` processes |
-| `/check_offer` says no credentials | Session password already cleared | Run `/login` again |
-| Proxy selected but IP still direct | Session is in direct mode or no proxy assigned | Use `/proxy`, `/ip`, or `/rotate_proxy` |
-| Proxy precheck fails | Bad proxy / blocked route | Rotate proxy or replace proxy pool |
-| No offer found | Account not eligible, wrong billing context, or promo already used | Check account region, payments profile, and offer history |
+| Issue | Fix |
+|---|---|
+| `No module named 'telegram'` or another missing package | Activate `.venv`, then run `pip install -r requirements.txt` again |
+| `409 Conflict` | Stop duplicate `main.py` bot processes and restart one instance only |
+| `/check_offer` says no credentials | Run `/login` again because the session password has already been cleared |
+| Proxy is selected but traffic still looks direct, or proxy precheck fails | Check `/proxy` and `/ip`, then rotate or replace the proxy pool, or switch to direct mode |
+| No offer found | Review account region, billing profile, payments setup, and whether the promo was already claimed |
+| Termux runs the bot but browser automation fails | Use Windows, Linux, or macOS with desktop Chrome for full automation support |
 
 ## Disclaimer
 

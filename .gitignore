@@ -16,8 +16,5 @@ venv/
 *.log
 logs/
 
-# Local proxy pool
-proxies.txt
-
 # Temporary local debug helpers
 tmp_*.py
