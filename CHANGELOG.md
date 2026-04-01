@@ -11,7 +11,7 @@ This file documents the feature baseline of AutoPixel.
 - Kept `proxies.txt` as a tracked sample file so first-time users can start from a ready format instead of creating the file from scratch.
 
 ### Product Readiness
-- Improved onboarding documentation across `README.md`, `CARA JALANKAN.txt`, and `.env.example` so fresh installs are easier to complete on Windows and Termux.
+- Improved onboarding documentation across `README.md`, `HOW TO RUN IT .txt`, and `.env.example` so fresh installs are easier to complete on Windows and Termux.
 - Documented the current Google One / Pixel offer support matrix and eligibility caveats more clearly for users checking the promo in different regions.
 - Added a clearer release summary path so channel notifications can explain Google One / Pixel improvements in a user-facing way instead of only mentioning internal workflow changes.
 

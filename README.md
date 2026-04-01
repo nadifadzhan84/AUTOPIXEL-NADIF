@@ -39,7 +39,7 @@ This update is meant to make the project easier for first-time users to configur
 | File | Purpose |
 |---|---|
 | `README.md` | Product overview, setup summary, commands, and troubleshooting |
-| `CARA JALANKAN.txt` | Plain-text run guide for Windows PowerShell, Windows CMD, and Android Termux |
+| `HOW TO RUN IT .txt` | Plain-text run guide for Windows PowerShell, Windows CMD, and Android Termux |
 | `CHANGELOG.md` | Baseline release notes and architecture history |
 
 ## Pixel Promo Region Matrix
@@ -132,7 +132,7 @@ AUTOPIXEL/
 
 ## Quick Start
 
-For the full plain-text run guide, see [`CARA JALANKAN.txt`](CARA%20JALANKAN.txt).
+For the full plain-text run guide, see [`HOW TO RUN IT .txt`](HOW%20TO%20RUN%20IT%20.txt).
 
 After the bot starts for the first time, run `/doctor` in Telegram to verify token, Chrome detection, header media, proxy pool readiness, and driver configuration before testing a real account.
 
@@ -202,7 +202,7 @@ Notes:
 - if `CHROMEDRIVER_PATH` is empty, the runtime falls back to automatic driver resolution
 - you can also set the Wit.ai token from Telegram with `/witai` and the bot will store it in `.env`
 - set `WIT_AI_TOKEN` if you want AutoPixel to try solving audio captcha challenges automatically
-- if you need help getting a Wit.ai token, see `PANDUAN MENDAPATKAN API KEY WIT.AI.txt`
+- if you need help getting a Wit.ai token, see `HOW TO GET A WIT.AI API KEY.txt`
 - `PROXY_DIAGNOSTICS_VERIFY_SSL=0` lets `/ip` and proxy precheck tolerate self-signed/intercepted TLS chains often seen on proxy routes
 
 ### Optional proxies

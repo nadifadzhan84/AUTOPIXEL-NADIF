@@ -38,6 +38,7 @@ jobs:
           import json
           import os
           import subprocess
+          from pathlib import Path
           import urllib.error
           import urllib.parse
           import urllib.request
@@ -164,6 +165,7 @@ jobs:
                   ".env.example",
                   "readme.md",
                   "changelog.md",
+                  "how to get a wit.ai api key.txt",
               }
               prefix_matches = (
                   "assets/telegram/",
@@ -192,6 +194,12 @@ jobs:
 
           pixel_related_files = [path for path in changed_files if is_pixel_related_file(path)]
 
+          def file_contains(path, needle):
+              try:
+                  return needle in Path(path).read_text(encoding="utf-8", errors="replace")
+              except Exception:
+                  return False
+
           product_highlights = []
           if touches("services/setup_diagnostics.py", "main.py", "handlers/session_handlers.py", "handlers/ui.py"):
               product_highlights.append("🩺 Add /doctor setup self-check and clearer first-run diagnostics for new users.")
@@ -201,8 +209,10 @@ jobs:
               product_highlights.append("🧭 Expand /ip output with env-ready emulation timezone and GPS values for easier setup.")
           if touches("services/google_automation.py", "services/device_simulator.py", "services/proxy_forwarder.py", "handlers/auth_handlers.py", "handlers/offer_handlers.py"):
               product_highlights.append("🎯 Improve Google One / Pixel automation flow, session realism, and proxy-aware behavior.")
-          if touches("README.md", "CARA JALANKAN.txt", "CHANGELOG.md", ".env.example"):
+          if touches("README.md", "HOW TO RUN IT .txt", "CHANGELOG.md", ".env.example", "HOW TO GET A WIT.AI API KEY.txt"):
               product_highlights.append("📚 Refresh onboarding docs, run guide, and sample environment config for easier first use.")
+          if touches("HOW TO GET A WIT.AI API KEY.txt"):
+              product_highlights.append("🧠 Add an English step-by-step guide for getting and storing a Wit.ai server token.")
           if touches("proxies.txt", ".gitignore"):
               product_highlights.append("🌐 Keep proxies.txt as a tracked sample file so users can start from a ready template.")
 
@@ -214,6 +224,36 @@ jobs:
 
           if pixel_related_files:
               badges.append("<code>📱 PIXEL UPDATE</code>")
+
+          key_upgrade_lines = []
+          if Path("services/wit_ai_solver.py").exists() and Path("services/google_automation.py").exists():
+              key_upgrade_lines.append("┣ 🧠 Wit.ai audio captcha solving can now run before manual fallback during Google login.")
+          if Path("handlers/auth_handlers.py").exists() and Path("services/runtime_settings.py").exists() and file_contains("main.py", 'CommandHandler(\"witai\"'):
+              key_upgrade_lines.append("┣ 🤖 /witai lets operators save, replace, or clear the Wit.ai token directly from Telegram and persist it to .env.")
+          if Path("services/setup_diagnostics.py").exists() and file_contains("main.py", 'CommandHandler(\"doctor\"'):
+              key_upgrade_lines.append("┣ 🩺 /doctor runs a first-time setup self-check for token, Chrome, .env, banner media, proxy pool, and chromedriver readiness.")
+          if Path("services/network_diagnostics.py").exists() and Path("services/device_simulator.py").exists():
+              key_upgrade_lines.append("┣ 🧭 /ip now exposes .env-ready timezone and GPS values so Pixel emulation can match the active route more accurately.")
+          if file_contains("services/google_automation.py", "StaleElementReferenceException"):
+              key_upgrade_lines.append("┣ 🛡️ Google login is hardened against stale element re-renders, with safer re-query and retry behavior.")
+          if Path("services/device_simulator.py").exists() and Path("services/google_automation.py").exists():
+              key_upgrade_lines.append("┣ 📱 Pixel and Google One automation are more proxy-aware, with better timezone, geolocation, and device profile consistency.")
+          if file_contains("handlers/offer_handlers.py", "PROXY_PRECHECK_ENABLED"):
+              key_upgrade_lines.append("┣ ⚡ Visible Chrome startup is faster on authenticated proxies because first-launch precheck can be skipped when configured.")
+          if file_contains("config.py", "def _env_text") and Path("services/setup_diagnostics.py").exists():
+              key_upgrade_lines.append("┣ 🔒 .env parsing and proxy path fallback are safer, reducing startup crashes caused by blank or malformed values.")
+          if file_contains("main.py", "bootstrap_retries=5"):
+              key_upgrade_lines.append("┣ 🌐 Telegram bootstrap now retries transient DNS or network failures instead of aborting immediately.")
+          if file_contains(".github/workflows/telegram-repo-update.yml", "Pixel Files Updated"):
+              key_upgrade_lines.append("┣ 📣 GitHub Actions Telegram releases now flag Pixel-related pushes with a dedicated badge and file section.")
+          if file_contains(".gitignore", "proxies.txt"):
+              key_upgrade_lines.append("┣ 🔐 proxies.txt stays local and is no longer intended to be uploaded to the private repository.")
+          if Path("HOW TO GET A WIT.AI API KEY.txt").exists():
+              key_upgrade_lines.append("┣ 📘 An English Wit.ai API key guide is included for international users who need audio solver setup help.")
+          if key_upgrade_lines:
+              key_upgrade_lines[-1] = key_upgrade_lines[-1].replace("┣", "┗", 1)
+          else:
+              key_upgrade_lines = ["┗ <i>No platform capability summary is available for this build.</i>"]
 
           release_mode = "major" if (
               len(product_highlights) >= 3
@@ -295,6 +335,9 @@ jobs:
                   "",
                   "┏ <b>What Users Need To Know</b>",
                   *highlight_lines,
+                  "",
+                  "┏ <b>Key Upgrades</b>",
+                  *key_upgrade_lines,
                   "",
                   "┏ <b>Release Headline</b>",
                   f"┗ 📝 <b>{html.escape(headline)}</b>",
