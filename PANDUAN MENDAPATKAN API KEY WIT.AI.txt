@@ -1,0 +1,23 @@
+PANDUAN MENDAPATKAN API KEY WIT.AI (AUDIO SOLVER)
+--------------------------------------------------------------------------------
+Wit.ai diperlukan oleh background.js dan solver audio captcha untuk memproses
+audio captcha menjadi teks.
+
+LANGKAH-LANGKAH:
+1. Buka situs resmi: https://wit.ai/
+2. Login menggunakan akun Facebook (Meta).
+3. Buat Aplikasi Baru:
+   - Klik "New App" di pojok kiri atas.
+   - Nama: bebas, misalnya "SiouX_Solver".
+   - Language: pilih "English".
+   - Visibility: pilih "Private".
+   - Klik "Create".
+4. Ambil Token:
+   - Masuk ke menu "Management" -> "Settings".
+   - Cari bagian "API Access".
+   - Salin kode pada kolom "Server Access Token".
+5. Konfigurasi token:
+   - Untuk repo ini, kirim `/witai TOKEN_ANDA` lewat bot Telegram.
+   - Atau isi `WIT_AI_TOKEN=` di file `.env`.
+   - Jika Anda memakai dashboard eksternal seperti `dashboard.html`, masukkan
+     token ke input ID `witAiTokenInput`, lalu simpan.

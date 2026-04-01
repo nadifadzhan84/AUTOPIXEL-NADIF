@@ -202,6 +202,7 @@ Notes:
 - if `CHROMEDRIVER_PATH` is empty, the runtime falls back to automatic driver resolution
 - you can also set the Wit.ai token from Telegram with `/witai` and the bot will store it in `.env`
 - set `WIT_AI_TOKEN` if you want AutoPixel to try solving audio captcha challenges automatically
+- if you need help getting a Wit.ai token, see `PANDUAN MENDAPATKAN API KEY WIT.AI.txt`
 - `PROXY_DIAGNOSTICS_VERIFY_SSL=0` lets `/ip` and proxy precheck tolerate self-signed/intercepted TLS chains often seen on proxy routes
 
 ### Optional proxies
