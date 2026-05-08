@@ -4,6 +4,9 @@ This file documents the feature baseline of AutoPixel.
 
 ## [Unreleased]
 
+### Added
+- Added `pixel_9_pro`, `pixel_9_pro_xl`, `pixel_9_pro_fold`, `pixel_10_pro_xl`, and `pixel_10_pro_fold` device presets. These are the Pixel models eligible for the Google One AI Premium (2 TB) 12-month trial, in addition to the existing `pixel_10_pro` default.
+
 ### Removed
 - Dropped the `pixel_4a`, `pixel_5_android_11`, `pixel_6`, `pixel_7_pro`, and `pixel_8_pro` device presets. The Google One / Pixel offer is only eligible on the Pixel 10 series, so the bot now simulates the Pixel 10 Pro exclusively and the default profile is `pixel_10_pro`.
 

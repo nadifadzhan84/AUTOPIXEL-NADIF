@@ -3,12 +3,12 @@
 **Pixel Google One Assistant**  
 Created by **Nadif Rizky**
 
-AutoPixel is a Telegram bot that simulates a Pixel 10 Pro device session, signs in to a Google account, checks Google One / Gemini offer availability, and gives you a modern control panel for session, proxy, IP, and diagnostic tools.
+AutoPixel is a Telegram bot that simulates a Pixel device session (Pixel 10 Pro by default, with the rest of the Google One AI Premium-eligible Pixel 9 Pro and Pixel 10 Pro lineup also available), signs in to a Google account, checks Google One / Gemini offer availability, and gives you a modern control panel for session, proxy, IP, and diagnostic tools.
 
 ## Highlights
 
-- Simulates a fresh Pixel 10 Pro device profile for each login session
-- Pixel 10 Pro device profile via `DEVICE_PROFILE` (only the Pixel 10 series is eligible for the Google One / Pixel offer)
+- Simulates a fresh Pixel device profile for each login session (defaults to Pixel 10 Pro)
+- Switchable device profiles for the Google One AI Premium 2 TB 12-month-eligible Pixel lineup (Pixel 9 Pro / 9 Pro XL / 9 Pro Fold and Pixel 10 Pro / 10 Pro XL / 10 Pro Fold) via `DEVICE_PROFILE`
 - Supports Gmail and Google Workspace accounts
 - Handles Google sign-in with TOTP / authenticator flow support
 - Can attempt audio captcha solving through `wit.ai` before falling back to manual verification
@@ -208,10 +208,10 @@ Notes:
 
 ### Optional device profile
 
-AutoPixel simulates a **Pixel 10 Pro on Android 16**. The Google One / Pixel offer is only eligible on the Pixel 10 series, so older Pixel presets have been removed. The preset key is set in `.env`:
+AutoPixel defaults to a **Pixel 10 Pro on Android 16** profile. Only Pixel devices eligible for the Google One AI Premium (2 TB) 12-month trial are bundled — that means the Pixel 9 Pro / 9 Pro XL / 9 Pro Fold and Pixel 10 Pro / 10 Pro XL / 10 Pro Fold. To switch to another preset, set it in `.env`:
 
 ```env
-DEVICE_PROFILE=pixel_10_pro
+DEVICE_PROFILE=pixel_9_pro
 ```
 
 Available presets:
@@ -219,8 +219,13 @@ Available presets:
 | Preset | Device | Android | SDK | GPU | RAM |
 |---|---|---|---|---|---|
 | `pixel_10_pro` (default) | Pixel 10 Pro | 16 | 36 | Adreno 750 | 12 GB |
+| `pixel_10_pro_xl` | Pixel 10 Pro XL | 16 | 36 | Adreno 750 | 16 GB |
+| `pixel_10_pro_fold` | Pixel 10 Pro Fold | 16 | 36 | Adreno 750 | 16 GB |
+| `pixel_9_pro` | Pixel 9 Pro | 16 | 36 | Mali-G715 Immortalis MP7 | 16 GB |
+| `pixel_9_pro_xl` | Pixel 9 Pro XL | 16 | 36 | Mali-G715 Immortalis MP7 | 16 GB |
+| `pixel_9_pro_fold` | Pixel 9 Pro Fold | 16 | 36 | Mali-G715 Immortalis MP7 | 16 GB |
 
-The profile sets the simulated user-agent, build IDs, screen metrics, WebGL renderer, RAM, and Client Hints headers so the session matches a Pixel 10 Pro. An unknown value logs a warning and falls back to the default Pixel 10 Pro / Android 16 profile.
+Switching the profile changes the simulated user-agent, build IDs, screen metrics, WebGL renderer, RAM, and Client Hints headers so the session matches the chosen device. An unknown value logs a warning and falls back to the default Pixel 10 Pro / Android 16 profile.
 
 ### Optional proxies
 

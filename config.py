@@ -81,8 +81,9 @@ BOT_HEADER_MEDIA_URL = _env_text(
 
 # ── Device specs – Available device profiles ────────────────────────────────
 # Each preset describes a stock Pixel build that the bot can simulate.
-# Google One Pixel offer support is limited to the Pixel 10 series, so only
-# those presets are kept here.
+# Only Pixel devices that qualify for the Google One AI Premium (2 TB)
+# 12-month trial are listed here: the Pixel 9 Pro / 9 Pro XL / 9 Pro Fold and
+# the Pixel 10 Pro / 10 Pro XL / 10 Pro Fold.
 DEVICE_PRESETS: dict[str, dict[str, str]] = {
     "pixel_10_pro": {
         "model": "Pixel 10 Pro",
@@ -91,6 +92,56 @@ DEVICE_PRESETS: dict[str, dict[str, str]] = {
         "android_version": "16",
         "android_sdk": "36",
         "build_id": "AP4A.250405.002",
+        "accept_language": "en-US,en;q=0.9",
+        "locale": "en-US",
+    },
+    "pixel_10_pro_xl": {
+        "model": "Pixel 10 Pro XL",
+        "brand": "google",
+        "manufacturer": "Google",
+        "android_version": "16",
+        "android_sdk": "36",
+        "build_id": "AP4A.250405.003",
+        "accept_language": "en-US,en;q=0.9",
+        "locale": "en-US",
+    },
+    "pixel_10_pro_fold": {
+        "model": "Pixel 10 Pro Fold",
+        "brand": "google",
+        "manufacturer": "Google",
+        "android_version": "16",
+        "android_sdk": "36",
+        "build_id": "AP4A.250405.004",
+        "accept_language": "en-US,en;q=0.9",
+        "locale": "en-US",
+    },
+    "pixel_9_pro": {
+        "model": "Pixel 9 Pro",
+        "brand": "google",
+        "manufacturer": "Google",
+        "android_version": "16",
+        "android_sdk": "36",
+        "build_id": "AP4A.250405.005",
+        "accept_language": "en-US,en;q=0.9",
+        "locale": "en-US",
+    },
+    "pixel_9_pro_xl": {
+        "model": "Pixel 9 Pro XL",
+        "brand": "google",
+        "manufacturer": "Google",
+        "android_version": "16",
+        "android_sdk": "36",
+        "build_id": "AP4A.250405.006",
+        "accept_language": "en-US,en;q=0.9",
+        "locale": "en-US",
+    },
+    "pixel_9_pro_fold": {
+        "model": "Pixel 9 Pro Fold",
+        "brand": "google",
+        "manufacturer": "Google",
+        "android_version": "16",
+        "android_sdk": "36",
+        "build_id": "AP4A.250405.007",
         "accept_language": "en-US,en;q=0.9",
         "locale": "en-US",
     },
