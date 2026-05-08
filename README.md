@@ -8,7 +8,7 @@ AutoPixel is a Telegram bot that simulates a Pixel device session (Pixel 10 Pro 
 ## Highlights
 
 - Simulates a fresh Pixel device profile for each login session (defaults to Pixel 10 Pro)
-- Switchable device profiles for the Google One AI Premium 2 TB 12-month-eligible Pixel lineup (Pixel 9 Pro / 9 Pro XL / 9 Pro Fold and Pixel 10 Pro / 10 Pro XL / 10 Pro Fold) via `DEVICE_PROFILE`
+- Switchable device profiles for the Google One AI Premium 2 TB 12-month-eligible Pixel lineup (Pixel 9 Pro / 9 Pro XL / 9 Pro Fold and Pixel 10 Pro / 10 Pro XL / 10 Pro Fold) via `DEVICE_PROFILE` or, per Telegram user, the new `/device` picker
 - Supports Gmail and Google Workspace accounts
 - Handles Google sign-in with TOTP / authenticator flow support
 - Can attempt audio captcha solving through `wit.ai` before falling back to manual verification
@@ -226,6 +226,13 @@ Available presets:
 | `pixel_9_pro_fold` | Pixel 9 Pro Fold | 16 | 36 | Mali-G715 Immortalis MP7 | 16 GB |
 
 Switching the profile changes the simulated user-agent, build IDs, screen metrics, WebGL renderer, RAM, and Client Hints headers so the session matches the chosen device. An unknown value logs a warning and falls back to the default Pixel 10 Pro / Android 16 profile.
+
+`DEVICE_PROFILE` only sets the **default** for new chats. From inside Telegram you can override it per user without restarting the bot:
+
+- send `/device` (or tap the **📱 Pick Device** button on the Control Panel)
+- pick any preset from the inline keyboard
+- the bot stores the choice in your chat session and applies it next time a fresh device profile is generated (e.g. on `/login`, `/check_offer`, `/rotate_proxy`, `/disable_proxy`)
+- if there is already an active session, the device profile is rebuilt in place so the change takes effect immediately
 
 ### Optional proxies
 

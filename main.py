@@ -39,8 +39,11 @@ from handlers import (
     AWAIT_MANUAL_VERIFICATION,
     AWAIT_PASSWORD,
     AWAIT_WIT_AI_TOKEN,
+    DEVICE_CALLBACK_PREFIX,
     cancel_2fa,
     check_offer,
+    device_menu,
+    device_select,
     doctor,
     disable_proxy,
     get_link,
@@ -212,6 +215,12 @@ def main() -> None:
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CallbackQueryHandler(status, pattern=r"^menu:status$"))
     app.add_handler(MessageHandler(filters.Regex(button_regex("menu_status")), status))
+    app.add_handler(CommandHandler("device", device_menu))
+    app.add_handler(CallbackQueryHandler(device_menu, pattern=r"^menu:device$"))
+    app.add_handler(MessageHandler(filters.Regex(button_regex("menu_device")), device_menu))
+    app.add_handler(
+        CallbackQueryHandler(device_select, pattern=rf"^{DEVICE_CALLBACK_PREFIX}")
+    )
 
     # Periodic job: purge expired sessions every 5 minutes
     app.job_queue.run_repeating(

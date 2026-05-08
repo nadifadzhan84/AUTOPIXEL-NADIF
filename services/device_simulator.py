@@ -188,6 +188,19 @@ DEVICE_SPECS: dict = DEVICE_SPECS_BY_PROFILE.get(
 )
 
 
+def _resolve_profile_name(profile_name: str | None) -> str:
+    """Return *profile_name* if it is a known preset, else the active default."""
+    if profile_name and profile_name in config.DEVICE_PRESETS:
+        return profile_name
+    return config.DEVICE_PROFILE_NAME
+
+
+def get_specs_for_profile(profile_name: str | None) -> dict:
+    """Return the screen/GPU/etc spec dict for *profile_name*."""
+    resolved = _resolve_profile_name(profile_name)
+    return DEVICE_SPECS_BY_PROFILE.get(resolved, PIXEL_10_PRO_SPECS)
+
+
 def luhn_checksum(number: str) -> int:
     """Return the Luhn check digit for a numeric string."""
     digits = [int(digit) for digit in number]
@@ -232,10 +245,11 @@ def random_chrome_patch() -> str:
     return actual
 
 
-def random_build_id() -> str:
+def random_build_id(profile_name: str | None = None) -> str:
     """Pick a realistic BUILD_ID from the pool that matches the active device."""
+    resolved = _resolve_profile_name(profile_name)
     builds = DEVICE_BUILDS_BY_PROFILE.get(
-        config.DEVICE_PROFILE_NAME,
+        resolved,
         DEVICE_BUILDS_BY_PROFILE["pixel_10_pro"],
     )
     return random.choice(builds)
@@ -288,6 +302,7 @@ class DeviceProfile:
     chrome_version: str
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
+    profile_name: str = config.DEVICE_PROFILE_NAME
     model: str = config.DEVICE_MODEL
     brand: str = config.DEVICE_BRAND
     manufacturer: str = config.DEVICE_MANUFACTURER
@@ -372,9 +387,7 @@ class DeviceProfile:
 
     def navigator_overrides_js(self) -> str:
         """Return JavaScript to inject navigator/screen spoofs via CDP."""
-        specs = DEVICE_SPECS_BY_PROFILE.get(
-            config.DEVICE_PROFILE_NAME, PIXEL_10_PRO_SPECS
-        )
+        specs = get_specs_for_profile(self.profile_name)
         brands_json = json.dumps(self.user_agent_brands())
         metadata_json = json.dumps(self.user_agent_high_entropy_values())
         locale_languages_json = json.dumps([self.locale, "en"])
@@ -628,22 +641,36 @@ class DeviceProfile:
 
 def create_device_profile(
     network_identity: Mapping[str, str] | None = None,
+    profile_name: str | None = None,
 ) -> DeviceProfile:
-    """Create a fresh Pixel 10 Pro device profile with unique identifiers."""
-    build_id = random_build_id()
+    """Create a fresh Pixel device profile with unique identifiers.
+
+    When *profile_name* is provided and matches a key in
+    :data:`config.DEVICE_PRESETS`, the resulting profile uses that preset's
+    model / brand / Android version / build pool. Otherwise it falls back to
+    the active default selected by the ``DEVICE_PROFILE`` environment variable.
+    """
+    resolved_profile = _resolve_profile_name(profile_name)
+    preset = config.DEVICE_PRESETS.get(resolved_profile, config.DEVICE_PRESETS[config.DEFAULT_DEVICE_PROFILE])
+
+    model = preset["model"]
+    brand = preset["brand"]
+    manufacturer = preset["manufacturer"]
+    android_version = preset["android_version"]
+    android_sdk = preset["android_sdk"]
+    accept_language = preset.get("accept_language", config.DEVICE_ACCEPT_LANGUAGE)
+    locale = preset.get("locale", config.DEVICE_LOCALE)
+
+    build_id = random_build_id(resolved_profile)
     chrome_version = random_chrome_patch()
     template = random.choice(config.USER_AGENT_TEMPLATES)
     user_agent = template.format(
-        android=config.ANDROID_VERSION,
-        model=config.DEVICE_MODEL,
+        android=android_version,
+        model=model,
         build=build_id,
         chrome=chrome_version,
     )
-    fingerprint = generate_device_fingerprint(
-        config.DEVICE_MODEL,
-        build_id,
-        config.ANDROID_VERSION,
-    )
+    fingerprint = generate_device_fingerprint(model, build_id, android_version)
     emulation = resolve_emulation_settings(network_identity)
     return DeviceProfile(
         imei=generate_imei(),
@@ -651,7 +678,15 @@ def create_device_profile(
         device_fingerprint=fingerprint,
         user_agent=user_agent,
         chrome_version=chrome_version,
+        profile_name=resolved_profile,
+        model=model,
+        brand=brand,
+        manufacturer=manufacturer,
+        android_version=android_version,
+        android_sdk=android_sdk,
         build_id=build_id,
+        accept_language=accept_language,
+        locale=locale,
         timezone_id=str(emulation["timezone_id"]),
         geolocation_latitude=float(emulation["geolocation_latitude"]),
         geolocation_longitude=float(emulation["geolocation_longitude"]),

@@ -48,7 +48,10 @@ async def _refresh_device_for_route(session: dict, proxy_url: str | None) -> Non
     else:
         session.pop("network_identity", None)
 
-    session["device"] = create_device_profile(network_identity=network_identity)
+    session["device"] = create_device_profile(
+        network_identity=network_identity,
+        profile_name=session.get("device_profile"),
+    )
     session["_device_route_tag"] = proxy_url or "__direct__"
 
 

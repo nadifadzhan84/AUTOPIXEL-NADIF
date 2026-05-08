@@ -16,6 +16,11 @@ from handlers.auth_handlers import (
     wit_ai_start,
     wit_ai_token,
 )
+from handlers.device_handlers import (
+    DEVICE_CALLBACK_PREFIX,
+    device_menu,
+    device_select,
+)
 from handlers.offer_handlers import (
     AWAIT_2FA_CODE,
     AWAIT_MANUAL_VERIFICATION,
@@ -61,6 +66,9 @@ __all__ = [
     "rotate_proxy",
     "status",
     "session_cleanup_job",
+    "device_menu",
+    "device_select",
+    "DEVICE_CALLBACK_PREFIX",
     "AWAIT_EMAIL",
     "AWAIT_PASSWORD",
     "AWAIT_WIT_AI_TOKEN",

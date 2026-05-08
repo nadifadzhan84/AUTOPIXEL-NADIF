@@ -16,11 +16,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_LANG = "en"
 SUPPORTED_LANGS = {"en", "id"}
 
-MENU_ROWS = [
+MENU_ROWS: list[tuple[str, ...]] = [
     ("menu_login", "menu_check_offer"),
     ("menu_status", "menu_get_link"),
     ("menu_proxy", "menu_ip"),
     ("menu_rotate_proxy", "menu_disable_proxy"),
+    ("menu_device",),
     ("menu_lang_en", "menu_lang_id"),
     ("menu_home", "menu_logout"),
 ]
@@ -69,6 +70,7 @@ I18N = {
         "command_ip_desc": "Check the current public IP and geo",
         "command_rotate_proxy_desc": "Switch to another proxy from the pool",
         "command_disable_proxy_desc": "Use your local/direct IP for this session",
+        "command_device_desc": "Pick which Pixel device the bot simulates",
         "command_lang_en_desc": "Switch the interface to English",
         "command_lang_id_desc": "Switch the interface to Indonesian",
         "command_logout_desc": "Clear the active session and browser state",
@@ -324,12 +326,27 @@ I18N = {
         "menu_ip": "🧭 Check IP",
         "menu_rotate_proxy": "🔄 Rotate Proxy",
         "menu_disable_proxy": "⛔ Direct Mode",
+        "menu_device": "📱 Pick Device",
         "menu_lang_en": "🇺🇸 English",
         "menu_lang_id": "🇮🇩 Indonesian",
         "menu_home": "🏠 Home",
         "menu_logout": "🗑️ Logout",
         "menu_panel_header": "⌬ PIXEL CONTROL PANEL",
         "menu_panel_refresh": "🪄 Open Dashboard",
+        "device_prompt": (
+            "📱 <b>Pick a Pixel Device</b>\n\n"
+            "Pick which Pixel the bot should simulate for your session. "
+            "Only devices eligible for the Google One AI Premium (2 TB) "
+            "12-month trial are listed.\n\n"
+            "Active: <code>{active}</code>"
+        ),
+        "device_set_title": "✅ <b>Device Updated</b>",
+        "device_set_body": (
+            "Bot will now simulate <b>{model}</b> (Android {android}) for your session."
+        ),
+        "device_set_next": "Next step: run <code>/login</code> or <code>/check_offer</code>.",
+        "device_set_toast": "Device set to {model}",
+        "device_unknown": "Unknown device preset.",
     },
     "id": {
         "start_title": "🚀 Pixel Google One Assistant",
@@ -371,6 +388,7 @@ I18N = {
         "command_ip_desc": "Cek IP publik dan geo saat ini",
         "command_rotate_proxy_desc": "Ganti ke proxy lain dari pool",
         "command_disable_proxy_desc": "Gunakan IP lokal/direct untuk sesi ini",
+        "command_device_desc": "Pilih device Pixel yang disimulasikan bot",
         "command_lang_en_desc": "Ubah antarmuka ke Bahasa Inggris",
         "command_lang_id_desc": "Ubah antarmuka ke Bahasa Indonesia",
         "command_logout_desc": "Hapus sesi aktif dan state browser sementara",
@@ -634,12 +652,27 @@ I18N = {
         "menu_ip": "🧭 Cek IP",
         "menu_rotate_proxy": "🔄 Ganti Proxy",
         "menu_disable_proxy": "⛔ Mode Direct",
+        "menu_device": "📱 Pilih Device",
         "menu_lang_en": "🇺🇸 Inggris",
         "menu_lang_id": "🇮🇩 Indonesia",
         "menu_home": "🏠 Beranda",
         "menu_logout": "🗑️ Logout",
         "menu_panel_header": "⌬ PANEL KONTROL PIXEL",
         "menu_panel_refresh": "🪄 Buka Dashboard",
+        "device_prompt": (
+            "📱 <b>Pilih Device Pixel</b>\n\n"
+            "Pilih Pixel yang akan disimulasikan bot untuk sesi Anda. "
+            "Hanya device yang memenuhi syarat trial Google One AI Premium "
+            "(2 TB) selama 12 bulan yang ditampilkan.\n\n"
+            "Aktif: <code>{active}</code>"
+        ),
+        "device_set_title": "✅ <b>Device Diperbarui</b>",
+        "device_set_body": (
+            "Bot sekarang akan menyimulasikan <b>{model}</b> (Android {android}) untuk sesi Anda."
+        ),
+        "device_set_next": "Langkah berikutnya: jalankan <code>/login</code> atau <code>/check_offer</code>.",
+        "device_set_toast": "Device diatur ke {model}",
+        "device_unknown": "Preset device tidak dikenal.",
     },
 }
 
@@ -767,8 +800,8 @@ async def send_header_media_async(context, chat_id: int, caption: str | None = N
 def main_menu_keyboard(context=None) -> ReplyKeyboardMarkup:
     """Return a persistent, emoji-rich navigation keyboard."""
     keyboard = [
-        [menu_label(left, context), menu_label(right, context)]
-        for left, right in MENU_ROWS
+        [menu_label(key, context) for key in row]
+        for row in MENU_ROWS
     ]
     return ReplyKeyboardMarkup(
         keyboard,
@@ -779,7 +812,7 @@ def main_menu_keyboard(context=None) -> ReplyKeyboardMarkup:
 
 
 def quick_actions_inline_keyboard(context=None) -> InlineKeyboardMarkup:
-    """Return a tidy 2-column inline action grid."""
+    """Return a tidy inline action grid."""
     rows = [
         [
             InlineKeyboardButton(
@@ -788,17 +821,14 @@ def quick_actions_inline_keyboard(context=None) -> InlineKeyboardMarkup:
             )
         ]
     ]
-    for left, right in MENU_ROWS:
+    for row in MENU_ROWS:
         rows.append(
             [
                 InlineKeyboardButton(
-                    menu_label(left, context),
-                    callback_data=menu_callback_data(left),
-                ),
-                InlineKeyboardButton(
-                    menu_label(right, context),
-                    callback_data=menu_callback_data(right),
-                ),
+                    menu_label(key, context),
+                    callback_data=menu_callback_data(key),
+                )
+                for key in row
             ]
         )
     rows.append(

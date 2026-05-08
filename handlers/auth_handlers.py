@@ -17,6 +17,7 @@ from core.session_manager import (
     ensure_proxy_session_token,
     get_session,
 )
+from handlers.device_handlers import sync_device_profile_to_session
 from services.device_simulator import create_device_profile
 from services.network_diagnostics import inspect_connection
 from services.runtime_settings import clear_wit_ai_token, store_wit_ai_token
@@ -213,7 +214,11 @@ async def login_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         session.pop("network_identity", None)
 
-    session["device"] = create_device_profile(network_identity=network_identity)
+    profile_name = sync_device_profile_to_session(context, session)
+    session["device"] = create_device_profile(
+        network_identity=network_identity,
+        profile_name=profile_name,
+    )
     session["_device_route_tag"] = selected_proxy or "__direct__"
     session["offer_link"] = None
     session["created_at"] = time.time()

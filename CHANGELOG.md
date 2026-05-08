@@ -5,6 +5,7 @@ This file documents the feature baseline of AutoPixel.
 ## [Unreleased]
 
 ### Added
+- Added per-user device profile selection inside the bot. Each Telegram user can now run `/device` (or tap the new **📱 Pick Device** button on the Control Panel) to choose which Pixel preset the bot should simulate for their session. The selection is stored per chat and is applied automatically the next time a device profile is generated (e.g. on `/login`, `/check_offer`, `/rotate_proxy`, `/disable_proxy`). Active sessions are refreshed in place when a new device is picked.
 - Added `pixel_9_pro`, `pixel_9_pro_xl`, `pixel_9_pro_fold`, `pixel_10_pro_xl`, and `pixel_10_pro_fold` device presets. These are the Pixel models eligible for the Google One AI Premium (2 TB) 12-month trial, in addition to the existing `pixel_10_pro` default.
 
 ### Removed

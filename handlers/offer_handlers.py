@@ -197,7 +197,10 @@ def _resolve_attempt_device(session: dict, attempt: int):
     existing_route_tag = session.get("_device_route_tag")
 
     if needs_fresh_device or not existing_device or existing_route_tag != route_tag:
-        device = create_device_profile(network_identity=session.get("network_identity"))
+        device = create_device_profile(
+            network_identity=session.get("network_identity"),
+            profile_name=session.get("device_profile"),
+        )
         session["device"] = device
         session["_device_route_tag"] = route_tag
         return device, True
