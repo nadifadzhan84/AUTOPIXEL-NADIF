@@ -21,6 +21,7 @@ from services.google_automation import (
     GoogleAutomationError,
     check_offer_with_driver,
     close_driver,
+    continue_manual_login_with_password,
     diagnose_offer_page,
     dump_offer_debug_artifacts,
     resolve_manual_login,
@@ -119,7 +120,11 @@ def _diagnostic_means_embedded_trial(diagnostic: str | None) -> bool:
 def _is_manual_challenge_error(exc: Exception) -> bool:
     """Return True when login failed because Google requested non-TOTP verification."""
     message = str(exc).lower()
-    return "no authenticator option found" in message and "requires" in message
+    if "no authenticator option found" in message and "requires" in message:
+        return True
+    if "google requested" in message and "before the password step" in message:
+        return True
+    return False
 
 
 def _is_dead_driver_error(exc: Exception) -> bool:
@@ -918,6 +923,14 @@ async def handle_manual_verification(
 
     driver = session.pop("_driver", None)
     challenge_type = session.get("_manual_challenge_type", "manual verification")
+    email_bytes = session.get("email")
+    pw_bytes = session.get("password")
+    email_str = (
+        bytes(email_bytes).decode("utf-8", errors="replace") if email_bytes else ""
+    )
+    pw_str = (
+        bytes(pw_bytes).decode("utf-8", errors="replace") if pw_bytes else ""
+    )
     if not driver:
         _clear_pending_verification(session)
         await _safe_send_bot_message(
@@ -946,7 +959,16 @@ async def handle_manual_verification(
     )
 
     try:
-        state = await asyncio.to_thread(resolve_manual_login, driver, 8)
+        if email_str and pw_str:
+            state = await asyncio.to_thread(
+                continue_manual_login_with_password,
+                driver,
+                email_str,
+                pw_str,
+                8,
+            )
+        else:
+            state = await asyncio.to_thread(resolve_manual_login, driver, 8)
         if state == "needs_totp":
             session["_driver"] = driver
             preserve_driver = True
