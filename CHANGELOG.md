@@ -7,6 +7,13 @@ This file documents the feature baseline of AutoPixel.
 ### Added
 - Added per-user device profile selection inside the bot. Each Telegram user can now run `/device` (or tap the new **📱 Pick Device** button on the Control Panel) to choose which Pixel preset the bot should simulate for their session. The selection is stored per chat and is applied automatically the next time a device profile is generated (e.g. on `/login`, `/check_offer`, `/rotate_proxy`, `/disable_proxy`). Active sessions are refreshed in place when a new device is picked.
 - Added `pixel_9_pro`, `pixel_9_pro_xl`, `pixel_9_pro_fold`, `pixel_10_pro_xl`, and `pixel_10_pro_fold` device presets. These are the Pixel models eligible for the Google One AI Premium (2 TB) 12-month trial, in addition to the existing `pixel_10_pro` default.
+- Expanded the offer scanner to walk Pixel-specific Google AI Pro / Google One AI Premium claim landing pages (`one.google.com/offer/pixel-12-month`, `one.google.com/offer/pixel-google-ai-pro`, `one.google.com/offer/pixel`, `one.google.com/g1aibenefit`, `one.google.com/redeem`, and `gemini.google.com/advanced`) before falling back to the generic `one.google.com/about/plans` page so eligible Pixel sessions can land on the partner-eft-onboard claim flow more reliably.
+- Added a `PIXEL_OFFER_URLS` constant in `config.py` so the Pixel offer landing pages are easy to override, extend, or audit.
+- Broadened offer keyword and SKU detection to also match `1 year` / `1-year` / `1 tahun` / `12 bulan` wording, the `pixel-eft-onboard` claim host, the additional `g1.2tb.ai.12month_eft`, `g1.2tb.ai.annual_eft`, and `g1.2tb.12month_eft` SKUs, and Indonesian redemption phrasing (`klaim`, `tukarkan`, `selama 12 bulan`, `selama 1 tahun`).
+- The scanner now also recognises when navigating to a Pixel offer URL redirects directly to a `partner-eft-onboard` claim URL and returns that URL immediately without re-parsing the page DOM.
+
+### Notes
+- These changes only widen which official Google landing pages and SKU/text patterns the bot inspects. They do **not** alter Google's server-side eligibility for the Google AI Pro 12-month Pixel promo (which still depends on Pixel device purchase and activation, region, billing profile, and Google's own checks). Accounts that are not eligible server-side will continue to see no offer link.
 
 ### Removed
 - Dropped the `pixel_4a`, `pixel_5_android_11`, `pixel_6`, `pixel_7_pro`, and `pixel_8_pro` device presets. The Google One / Pixel offer is only eligible on the Pixel 10 series, so the bot now simulates the Pixel 10 Pro exclusively and the default profile is `pixel_10_pro`.
