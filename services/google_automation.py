@@ -34,7 +34,7 @@ from core.proxy_manager import (
     parse_proxy_parts,
     resolve_runtime_proxy_url,
 )
-from services.device_simulator import DEVICE_SPECS as SPECS, DeviceProfile
+from services.device_simulator import DeviceProfile, get_specs_for_profile
 from services.proxy_forwarder import AuthenticatedProxyForwarder
 from services.wit_ai_solver import (
     AudioCaptchaSolveError,
@@ -198,6 +198,7 @@ def build_driver(
 ) -> webdriver.Chrome:
     """Return a Chrome WebDriver configured for the device profile."""
     runtime_proxy_url = resolve_runtime_proxy_url(proxy_url, proxy_session_token)
+    specs = get_specs_for_profile(profile.profile_name)
     options = uc.ChromeOptions()
     options.page_load_strategy = "eager"
     headless_enabled = config.HEADLESS if headless is None else headless
@@ -210,7 +211,7 @@ def build_driver(
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-infobars")
     options.add_argument("--disable-notifications")
-    options.add_argument(f"--window-size={SPECS['width']},{SPECS['height']}")
+    options.add_argument(f"--window-size={specs['width']},{specs['height']}")
     options.add_argument(f"--user-agent={profile.user_agent}")
 
     options.add_argument("--disable-software-rasterizer")
@@ -307,12 +308,12 @@ def build_driver(
         driver.execute_cdp_cmd(
             "Emulation.setDeviceMetricsOverride",
             {
-                "width": SPECS["width"],
-                "height": SPECS["height"],
-                "deviceScaleFactor": SPECS["pixel_ratio"],
+                "width": specs["width"],
+                "height": specs["height"],
+                "deviceScaleFactor": specs["pixel_ratio"],
                 "mobile": True,
-                "screenWidth": SPECS["device_width"],
-                "screenHeight": SPECS["device_height"],
+                "screenWidth": specs["device_width"],
+                "screenHeight": specs["device_height"],
             },
         )
         driver.execute_cdp_cmd(
@@ -334,7 +335,7 @@ def build_driver(
         )
         driver.execute_cdp_cmd(
             "Emulation.setTouchEmulationEnabled",
-            {"enabled": True, "maxTouchPoints": SPECS["max_touch_points"]},
+            {"enabled": True, "maxTouchPoints": specs["max_touch_points"]},
         )
         try:
             driver.execute_cdp_cmd(
@@ -1214,23 +1215,86 @@ def _looks_like_checkout_url(url: str) -> bool:
             "store.google.com/subscriptions/checkout",
             "play.google.com",
             "tokenized.play.google.com",
+            "pay.google.com",
+            "payments.google.com",
             "purchase",
             "buy",
         )
     )
 
 
+def _trial_candidate_text(element: WebElement) -> str:
+    """Return searchable text/attributes from a potential trial CTA element."""
+    parts: list[str] = []
+    for attr in (
+        "data-sku-id",
+        "data-plan-id",
+        "data-product-id",
+        "data-offer-id",
+        "aria-label",
+        "title",
+        "data-formatted-price",
+        "href",
+    ):
+        try:
+            value = element.get_attribute(attr)
+        except StaleElementReferenceException:
+            raise
+        except Exception:
+            value = ""
+        if value:
+            parts.append(value)
+
+    try:
+        parts.append(element.text or "")
+    except StaleElementReferenceException:
+        raise
+    except Exception:
+        pass
+
+    try:
+        parts.append(element.get_attribute("innerText") or "")
+    except Exception:
+        pass
+
+    return " ".join(parts).lower()
+
+
+def _is_trial_candidate_element(element: WebElement) -> bool:
+    """Return True when a clickable element looks like a free/trial CTA."""
+    try:
+        text = _trial_candidate_text(element)
+    except StaleElementReferenceException:
+        return False
+
+    markers = (
+        "partner-eft-onboard",
+        "freetrial",
+        "free trial",
+        "start trial",
+        "try for",
+        "uji coba",
+        "mulai uji coba",
+        "1month",
+        "1-month",
+        "month_eft",
+        "_eft",
+        "$0",
+        "0/month",
+        "0/mo",
+        "0/bln",
+        "rp0",
+    )
+    return any(marker in text for marker in markers)
+
+
 def _trial_button_priority(button: WebElement) -> tuple[int, str]:
     """Rank trial buttons so AI/Gemini-related monthly trials are preferred."""
-    sku_id = (button.get_attribute("data-sku-id") or "").lower()
-    label = " ".join(
-        part
-        for part in (
-            button.get_attribute("aria-label") or "",
-            button.text or "",
-            button.get_attribute("data-formatted-price") or "",
-        )
-    ).lower()
+    try:
+        sku_id = (button.get_attribute("data-sku-id") or "").lower()
+        label = _trial_candidate_text(button)
+    except StaleElementReferenceException:
+        return (999, "")
 
     score = 0
     if ".ai." in sku_id or "ai pro" in label or "gemini" in label:
@@ -1305,35 +1369,31 @@ def _capture_checkout_after_trial_click(
 
 def extract_trial_button_link(driver: webdriver.Chrome) -> Optional[str]:
     """Try to launch a Google One trial checkout from page buttons."""
-    try:
-        buttons = driver.find_elements(By.CSS_SELECTOR, "button[data-sku-id]")
-    except Exception:
-        return None
-
     candidates: list[WebElement] = []
-    for button in buttons:
+    seen: set[str] = set()
+    selectors = (
+        "button[data-sku-id]",
+        '[role="button"][data-sku-id]',
+        "[data-sku-id]",
+        "button",
+        'a[role="button"]',
+        '[role="button"]',
+    )
+
+    for selector in selectors:
         try:
-            sku_id = (button.get_attribute("data-sku-id") or "").lower()
-            label = " ".join(
-                part
-                for part in (
-                    button.get_attribute("aria-label") or "",
-                    button.text or "",
-                    button.get_attribute("data-formatted-price") or "",
-                )
-            ).lower()
-        except StaleElementReferenceException:
+            elements = driver.find_elements(By.CSS_SELECTOR, selector)
+        except Exception:
             continue
 
-        if not sku_id:
-            continue
-        if (
-            "1month" in sku_id
-            or "trial" in label
-            or "uji coba" in label
-            or "start trial" in label
-        ):
-            candidates.append(button)
+        for element in elements:
+            element_id = getattr(element, "id", "")
+            if element_id and element_id in seen:
+                continue
+            if element_id:
+                seen.add(element_id)
+            if _is_trial_candidate_element(element):
+                candidates.append(element)
 
     for button in sorted(candidates, key=_trial_button_priority):
         link = _capture_checkout_after_trial_click(driver, button)
