@@ -417,6 +417,48 @@ def _looks_like_captcha_error_text(text: str | None) -> bool:
     return any(marker in normalized for marker in markers)
 
 
+def _detect_google_challenge_type(driver: webdriver.Chrome) -> str | None:
+    """Return the visible Google challenge type, if the current page is one."""
+    try:
+        current_url = driver.current_url or ""
+    except Exception:
+        current_url = ""
+
+    if not _is_google_challenge_url(current_url):
+        return None
+
+    combined = current_url.lower()
+    try:
+        combined += " " + (driver.title or "").lower()
+    except Exception:
+        pass
+    try:
+        combined += " " + (driver.page_source or "").lower()
+    except Exception:
+        pass
+
+    if any(
+        marker in combined
+        for marker in (
+            "recaptcha",
+            "captcha",
+            "not a robot",
+            "confirm you're not a robot",
+            "confirm you\u2019re not a robot",
+            "text you hear or see",
+            "characters you see in the image above",
+        )
+    ):
+        return "captcha / image verification"
+    if "security key" in combined or "usb" in combined:
+        return "security key"
+    if "phone" in combined or "sms" in combined:
+        return "SMS / phone verification"
+    if "tap yes" in combined or "google prompt" in combined:
+        return "Google prompt (tap Yes on your phone)"
+    return "two-step verification"
+
+
 def get_login_debug_snapshot(driver: webdriver.Chrome) -> dict[str, str]:
     """Return a small snapshot of the current login page for diagnostics."""
     current_url = ""
@@ -906,6 +948,33 @@ def _wait_for_password_stage(driver: webdriver.Chrome) -> WebElement | None:
                 continue
             if element.is_displayed():
                 return element
+
+        challenge_type = _detect_google_challenge_type(driver)
+        if challenge_type:
+            if (
+                "captcha" in challenge_type.lower()
+                and not captcha_solver_attempted
+                and wit_ai_is_available()
+            ):
+                captcha_solver_attempted = True
+                if has_audio_captcha_challenge(driver):
+                    logger.info(
+                        "Audio captcha detected before password step; trying Wit.ai solver."
+                    )
+                    if _try_wit_ai_audio_captcha(driver, "pre-password challenge"):
+                        time.sleep(2)
+                        continue
+
+            if not _driver_is_headless(driver):
+                setattr(driver, "_autopixel_challenge_type", challenge_type)
+                logger.info(
+                    "Manual verification required before password step: %s",
+                    challenge_type,
+                )
+                return None
+            raise GoogleAutomationError(
+                f"Google requested {challenge_type} before the password step."
+            )
 
         detail = get_signin_error_text(driver)
         captcha_detected = bool(detail and _looks_like_captcha_error_text(detail))
@@ -1593,6 +1662,40 @@ def resolve_manual_login(driver, timeout: int = 10) -> str:
     return wait_for_login_resolution(driver, timeout=timeout)
 
 
+def continue_manual_login_with_password(
+    driver,
+    email: str,
+    password: str,
+    timeout: int = 4,
+) -> str:
+    """Submit the stored password if manual verification lands on the password page."""
+    password_selectors = (
+        (By.CSS_SELECTOR, 'input[type="password"]'),
+        (By.CSS_SELECTOR, 'input[name="Passwd"]'),
+        (By.CSS_SELECTOR, 'input[autocomplete="current-password"]'),
+    )
+
+    try:
+        wait_for_any(driver, password_selectors, timeout=timeout)
+    except TimeoutException:
+        return resolve_manual_login(driver, timeout=timeout)
+
+    logger.info(
+        "Password page detected after manual verification; submitting stored password."
+    )
+    _type_into_any(
+        driver,
+        password_selectors,
+        password,
+        "password field",
+        attempts=3,
+        timeout=timeout,
+    )
+    _click_element(driver, By.ID, "passwordNext", "password next button")
+    time.sleep(2)
+    return _resolve_post_password_state(driver, email)
+
+
 def check_offer_with_driver(driver) -> Optional[str]:
     """Navigate to Google One and find the Gemini Pro offer link."""
     return navigate_google_one(driver)
@@ -1623,6 +1726,7 @@ __all__ = [
     "start_login",
     "submit_2fa_code",
     "resolve_manual_login",
+    "continue_manual_login_with_password",
     "check_offer_with_driver",
     "diagnose_offer_page",
     "dump_offer_debug_artifacts",
