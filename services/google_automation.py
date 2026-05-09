@@ -811,6 +811,80 @@ def _send_keys_human_like(
         time.sleep(random.uniform(delay_min, delay_max))
 
 
+def _read_input_value(element: WebElement) -> str:
+    """Return the current value of an input element, tolerating stale references."""
+    try:
+        value = element.get_attribute("value")
+    except StaleElementReferenceException:
+        return ""
+    except WebDriverException:
+        return ""
+    return value or ""
+
+
+def _focus_input(driver: webdriver.Chrome, element: WebElement) -> None:
+    """Bring an input element into focus before typing."""
+    try:
+        driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+            element,
+        )
+    except Exception:
+        pass
+
+    try:
+        element.click()
+    except WebDriverException:
+        try:
+            driver.execute_script("arguments[0].focus();", element)
+        except Exception:
+            pass
+
+
+def _set_input_value_via_js(
+    driver: webdriver.Chrome, element: WebElement, value: str
+) -> bool:
+    """Set an input value via JavaScript and dispatch the events Google listens for."""
+    try:
+        driver.execute_script(
+            """
+            const el = arguments[0];
+            const value = arguments[1];
+            const setter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            ) && Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            ).set;
+            if (setter) {
+                setter.call(el, value);
+            } else {
+                el.value = value;
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            """,
+            element,
+            value,
+        )
+    except WebDriverException as exc:
+        logger.debug("JS-based input fallback failed: %s", exc)
+        return False
+    return True
+
+
+def _set_input_value_via_cdp(driver: webdriver.Chrome, value: str) -> bool:
+    """Insert text into the focused element using Chrome DevTools Protocol."""
+    try:
+        driver.execute_cdp_cmd("Input.insertText", {"text": value})
+    except WebDriverException as exc:
+        logger.debug("CDP Input.insertText fallback failed: %s", exc)
+        return False
+    except Exception as exc:
+        logger.debug("CDP Input.insertText fallback raised: %s", exc)
+        return False
+    return True
+
+
 def _type_into_any(
     driver: webdriver.Chrome,
     selectors: tuple[tuple[str, str], ...],
@@ -827,9 +901,67 @@ def _type_into_any(
     for attempt in range(1, attempts + 1):
         try:
             field = wait_for_any(driver, selectors, timeout=timeout)
-            field.clear()
-            _send_keys_human_like(field, value, delay_min=delay_min, delay_max=delay_max)
-            return
+            _focus_input(driver, field)
+            try:
+                field.clear()
+            except (StaleElementReferenceException, WebDriverException):
+                # Re-find the field if it went stale during clear; fall through
+                # to the typing step which will surface a stale-element error.
+                field = wait_for_any(driver, selectors, timeout=timeout)
+                _focus_input(driver, field)
+
+            try:
+                _send_keys_human_like(
+                    field, value, delay_min=delay_min, delay_max=delay_max
+                )
+            except StaleElementReferenceException:
+                # The element rerendered mid-typing (common on Google's mobile
+                # sign-in). Re-find and let the verification logic below decide
+                # whether to retry or fall back.
+                field = wait_for_any(driver, selectors, timeout=timeout)
+
+            current_value = _read_input_value(field)
+            if current_value == value:
+                return
+
+            # Google sometimes swallows or partially registers send_keys input,
+            # especially under mobile emulation. Try a JS-based set + events
+            # before declaring failure so the flow can advance.
+            logger.info(
+                "%s only received %r after send_keys; retrying via JS fallback (attempt %d/%d).",
+                description.capitalize(),
+                current_value,
+                attempt,
+                attempts,
+            )
+            try:
+                field = wait_for_any(driver, selectors, timeout=timeout)
+            except TimeoutException:
+                pass
+            _focus_input(driver, field)
+            try:
+                field.clear()
+            except (StaleElementReferenceException, WebDriverException):
+                pass
+
+            if _set_input_value_via_js(driver, field, value):
+                if _read_input_value(field) == value:
+                    return
+
+            # Final fallback: ask Chrome to insert the text via CDP, which
+            # mirrors a real IME composition event chain.
+            _focus_input(driver, field)
+            if _set_input_value_via_cdp(driver, value):
+                if _read_input_value(field) == value:
+                    return
+
+            logger.warning(
+                "%s did not retain its value after fallbacks (attempt %d/%d).",
+                description.capitalize(),
+                attempt,
+                attempts,
+            )
+            time.sleep(0.6)
         except StaleElementReferenceException as exc:
             last_exc = exc
             logger.warning(
@@ -967,6 +1099,27 @@ def _wait_for_password_stage(driver: webdriver.Chrome) -> WebElement | None:
     raise TimeoutException("Password field did not appear in time.")
 
 
+def _verify_email_field_value(
+    driver: webdriver.Chrome,
+    selectors: tuple[tuple[str, str], ...],
+    expected: str,
+) -> bool:
+    """Return True when the visible email input on the page contains expected."""
+    for by, value in selectors:
+        try:
+            element = driver.find_element(by, value)
+        except NoSuchElementException:
+            continue
+        try:
+            if not element.is_displayed():
+                continue
+        except StaleElementReferenceException:
+            continue
+        if _read_input_value(element).strip() == expected.strip():
+            return True
+    return False
+
+
 def gmail_login(driver: webdriver.Chrome, email: str, password: str) -> str:
     """Perform Google login and return status: success, failed, or needs_totp."""
     try:
@@ -1024,6 +1177,23 @@ def gmail_login(driver: webdriver.Chrome, email: str, password: str) -> str:
                 time.sleep(1)
         else:
             raise GoogleAutomationError("Email field stale after 3 retries")
+
+        if not _verify_email_field_value(driver, email_selectors, email):
+            logger.warning(
+                "Email field is empty after typing; attempting one more autofill pass."
+            )
+            _type_into_any(
+                driver,
+                email_selectors,
+                email,
+                "email field",
+                attempts=3,
+            )
+            if not _verify_email_field_value(driver, email_selectors, email):
+                raise GoogleAutomationError(
+                    "Could not autofill the Google email field. The page may be "
+                    "blocking automated input; try again or run a manual login."
+                )
 
         _click_element(driver, By.ID, "identifierNext", "email next button")
         time.sleep(1)
