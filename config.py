@@ -276,17 +276,41 @@ GMAIL_LOGIN_URL = "https://accounts.google.com/signin/v2/identifier"
 GOOGLE_ONE_URL = "https://one.google.com/"
 GOOGLE_ONE_OFFERS_URL = "https://one.google.com/about/plans"
 
+# Pixel-specific Google AI Pro / Google One AI Premium 12-month claim landing
+# pages. These mirror the redemption entry points referenced in Google's
+# official Pixel offer help docs (support.google.com/gemini/answer/13529884
+# and support.google.com/pixelphone/answer/13529884). The scanner walks them
+# in priority order before falling back to the generic plans page so an
+# eligible Pixel session can land on the partner-eft-onboard claim flow even
+# when the regular /about/plans card is not surfaced.
+PIXEL_OFFER_URLS = [
+    "https://one.google.com/offer/pixel-12-month",
+    "https://one.google.com/offer/pixel-google-ai-pro",
+    "https://one.google.com/offer/pixel",
+    "https://one.google.com/g1aibenefit",
+    "https://one.google.com/redeem",
+    "https://gemini.google.com/advanced",
+]
+
 # ── Gemini offer detection keywords ──────────────────────────────────────────
 GEMINI_OFFER_KEYWORDS = [
     "gemini pro",
     "gemini advanced",
+    "google ai pro",
+    "1 year",
+    "1-year",
+    "1 tahun",
     "12 month",
     "12-month",
+    "12 bulan",
     "free trial",
     "activate",
     "get started",
     "claim offer",
+    "claim",
     "redeem",
+    "klaim",
+    "tukarkan",
 ]
 
 # Only accept offer links whose domain matches one of these.

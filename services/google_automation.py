@@ -1159,20 +1159,32 @@ def diagnose_google_one_page(driver: webdriver.Chrome) -> str | None:
     )
     free_offer_markers = (
         "partner-eft-onboard",
+        "pixel-eft-onboard",
         "bard_advanced",
         "claim offer",
         "redeem",
+        "klaim",
+        "tukarkan",
         "free trial",
         "12-month",
         "12 month",
+        "12 bulan",
+        "1-year",
+        "1 year",
+        "1 tahun",
         "freetrial",
         "freetrialperiod",
         "start trial",
         "mulai uji coba",
         "$0/bln",
         "selama 1 bulan",
+        "selama 12 bulan",
+        "selama 1 tahun",
         "data-sku-id=\"g1.2tb.ai.1month_eft\"",
+        "data-sku-id=\"g1.2tb.ai.12month_eft\"",
+        "data-sku-id=\"g1.2tb.ai.annual_eft\"",
         "data-sku-id=\"g1.2tb.1month_eft\"",
+        "data-sku-id=\"g1.2tb.12month_eft\"",
     )
 
     if any(marker in page_source for marker in free_offer_markers):
@@ -1407,9 +1419,37 @@ def extract_payment_link(driver: webdriver.Chrome) -> Optional[str]:
     return None
 
 
+def _offer_scan_urls() -> list[str]:
+    """Return the ordered list of URLs the offer scanner should walk.
+
+    Pixel-specific landing pages are visited first so eligible Pixel sessions
+    can land directly on the partner-eft-onboard claim flow before the bot
+    falls back to the generic Google One plans page.
+    """
+    pixel_urls = list(getattr(config, "PIXEL_OFFER_URLS", []) or [])
+    fallback_urls = [config.GOOGLE_ONE_OFFERS_URL, config.GOOGLE_ONE_URL]
+
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for url in pixel_urls + fallback_urls:
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        ordered.append(url)
+    return ordered
+
+
+def _short_current_url(driver: webdriver.Chrome) -> str:
+    """Return the current driver URL, falling back to an empty string on error."""
+    try:
+        return driver.current_url or ""
+    except Exception:
+        return ""
+
+
 def navigate_google_one(driver: webdriver.Chrome) -> Optional[str]:
     """Navigate Google One pages and attempt to find the offer link."""
-    for url in (config.GOOGLE_ONE_OFFERS_URL, config.GOOGLE_ONE_URL):
+    for url in _offer_scan_urls():
         try:
             logger.info("Navigating to %s", url)
             driver.get(url)
@@ -1426,6 +1466,11 @@ def navigate_google_one(driver: webdriver.Chrome) -> Optional[str]:
                     break
                 except NoSuchElementException:
                     continue
+
+            landed_url = _short_current_url(driver)
+            if landed_url and is_correct_offer_url(landed_url):
+                logger.info("Pixel offer landing page already on claim URL: %s", landed_url)
+                return landed_url
 
             link = extract_payment_link(driver)
             if link:

@@ -32,8 +32,11 @@ As of **March 31, 2026**, the current user-facing baseline includes:
 - safer `.env` handling so bad numeric fallback values do not break startup
 - a tracked sample `proxies.txt` file for quicker proxy onboarding
 - refreshed Google One / Pixel onboarding docs and region guidance
+- the offer scanner now also walks Pixel-specific Google AI Pro / Google One AI Premium claim landing pages (`one.google.com/offer/pixel-12-month`, `/offer/pixel-google-ai-pro`, `/offer/pixel`, `/g1aibenefit`, `/redeem`, and `gemini.google.com/advanced`) and recognises broader 1-year / 12-month / Indonesian "1 tahun" promo wording so eligible Pixel sessions are more likely to land on the `partner-eft-onboard` claim flow
 
 This update is meant to make the project easier for first-time users to configure, diagnose, and understand before they run a live offer check.
+
+> Note: the additional Pixel-specific landing pages widen which official Google promo entry points the bot inspects, but they do **not** alter Google's server-side eligibility for the Google AI Pro 12-month Pixel promo. Eligibility still depends on Pixel device purchase + activation, account region, billing profile, and Google's own live checks. Accounts that are not eligible server-side will continue to see no offer link.
 
 ## Documentation
 
